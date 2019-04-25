@@ -1,6 +1,9 @@
 defmodule Peripheral.MCU do
   use GenServer
 
+  @msg_turn_on 0
+  @msg_turn_off 1
+
   def start_link([]) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
@@ -11,6 +14,14 @@ defmodule Peripheral.MCU do
 
   def send(data) do
     GenServer.call(__MODULE__, {:send, data})
+  end
+
+  def turn_on() do
+    send(<<1, @msg_turn_on>>)
+  end
+
+  def turn_off() do
+    send(<<1, @msg_turn_off>>)
   end
 
   def init([]) do
@@ -31,11 +42,12 @@ defmodule Peripheral.MCU do
     {:reply, :ok, state}
   end
 
-  def handle_info(
-    {:DOWN, ref, :process, _object, _reason}, 
-    {_pid, ref}
-  ) do
+  def handle_info({:DOWN, ref, :process, _object, _reason}, {_pid, ref}) do
     {:noreply, {nil, nil}}
+  end
+
+  def handle_info(_data, state) do
+    {:noreply, state}
   end
 
 end
