@@ -2,6 +2,8 @@ defmodule Peripheral.Protocol do
   @behaviour :ranch_protocol
   use GenServer
 
+  alias Peripheral.MCUWorker
+
   def start_link(ref, socket, transport, opts) do
     :proc_lib.start_link(
       __MODULE__, :init, [ref, socket, transport, opts])
@@ -12,7 +14,7 @@ defmodule Peripheral.Protocol do
     :ok = :ranch.accept_ack(ref)
     :ok = transport.setopts(socket, active: :once)
 
-    Peripheral.MCU.register(self())
+    MCUWorker.register(self())
 
     :gen_server.enter_loop(
       __MODULE__, [], {socket, transport})
@@ -22,11 +24,29 @@ defmodule Peripheral.Protocol do
     {:error, nil}
   end
 
+  defp processing_data(data, transport, socket) do
+    <<size, content :: binary>> = data
+    content_size = byte_size(content)
+    cond do
+      size > content_size ->
+        {:ok, remain} = transport.recv(socket, size - content_size, 5000)
+        MCUWorker.msg(content <> remain)
+
+      size == content_size ->
+        MCUWorker.msg(content)
+
+      true ->
+        MCUWorker.msg(binary_part(content, 0, size))
+        data = binary_part(content, size, content_size - size)
+        processing_data(data, transport, socket)
+    end
+  end
+
   def handle_info(
     {:tcp, _socket, data}, 
-    state = {socket, transport}
-  ) do
-    IO.inspect data
+    state = {socket, transport})
+  do
+    processing_data(data, transport, socket)
     :ok = transport.setopts(socket, active: :once)
     {:noreply, state}
   end
@@ -35,17 +55,15 @@ defmodule Peripheral.Protocol do
     {:stop, :tcp_closed, state}
   end
 
-  def handle_call(
-    {:send, data}, _from, 
-    state = {socket, transport}
-  ) do
-    IO.puts "send: #{data}"
+  def handle_cast(
+    {:send_data, data}, state = {socket, transport})
+  do
     :ok = transport.send(socket, data)
-    {:reply, :ok, state}
+    {:noreply, state}
   end
 
-  def send(pid, data) do
-    GenServer.call(pid, {:send, data})
+  def send_data(pid, data) do
+    GenServer.cast(pid, {:send_data, data})
   end
 
 end
