@@ -7,6 +7,8 @@ defmodule Peripheral.MCU do
   @msg_request_page 3
   @msg_recv_page 4
   @msg_start_boot 5
+  @msg_echo_request 6
+  @msg_echo_response 7
 
   alias Peripheral.MCUWorker
 
@@ -47,6 +49,9 @@ defmodule Peripheral.MCU do
         file = binary_part(mcu.file, page_size, file_size - page_size)
         send_data(mcu, <<1 + page_size, @msg_recv_page>> <> page)
         %{mcu | file: file}
+
+      @msg_echo_response ->
+        IO.puts "Echo: #{content}"
     end
   end
 
@@ -58,6 +63,10 @@ defmodule Peripheral.MCU do
 
   def turn_off() do
     MCUWorker.send_data(<<1, @msg_turn_off>>)
+  end
+
+  def echo(s) do
+    MCUWorker.send_data(<<1 + byte_size(s), @msg_echo_request>> <> s)
   end
 
 end
