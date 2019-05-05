@@ -48,10 +48,14 @@ defmodule Peripheral.MCU do
         page = binary_part(mcu.file, 0, page_size)
         file = binary_part(mcu.file, page_size, file_size - page_size)
         send_data(mcu, <<1 + page_size, @msg_recv_page>> <> page)
+        if file == "" do
+          IO.puts "Requesting pages completed"
+        end
         %{mcu | file: file}
 
       @msg_echo_response ->
         IO.puts "Echo: #{content}"
+        mcu
     end
   end
 
