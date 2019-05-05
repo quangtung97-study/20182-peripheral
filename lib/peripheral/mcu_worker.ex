@@ -48,5 +48,4 @@ defmodule Peripheral.MCUWorker do
   def handle_info(_data, mcu) do
     {:noreply, mcu}
   end
-
 end

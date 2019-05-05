@@ -33,13 +33,16 @@ defmodule Peripheral.MCU do
   end
 
   def handle_msg(mcu, data) do
-    <<type, content :: binary>> = data
+    <<type, content::binary>> = data
+
     case type do
-      @msg_ping -> mcu
+      @msg_ping ->
+        mcu
 
       @msg_start_boot ->
+        System.cmd("./hex2bin", ["app.hex", "app.bin"])
         file = File.read!("app.bin")
-        IO.puts "Start Booting"
+        IO.puts("Start Booting")
         %{mcu | file: file}
 
       @msg_request_page ->
@@ -48,13 +51,15 @@ defmodule Peripheral.MCU do
         page = binary_part(mcu.file, 0, page_size)
         file = binary_part(mcu.file, page_size, file_size - page_size)
         send_data(mcu, <<1 + page_size, @msg_recv_page>> <> page)
+
         if file == "" do
-          IO.puts "Requesting pages completed"
+          IO.puts("Requesting pages completed")
         end
+
         %{mcu | file: file}
 
       @msg_echo_response ->
-        IO.puts "Echo: #{content}"
+        IO.puts("Echo: #{content}")
         mcu
     end
   end
@@ -72,5 +77,4 @@ defmodule Peripheral.MCU do
   def echo(s) do
     MCUWorker.send_data(<<1 + byte_size(s), @msg_echo_request>> <> s)
   end
-
 end

@@ -20,7 +20,7 @@ defmodule Peripheral.MixProject do
 
   defp deps do
     [
-      {:ranch, "~> 1.7.1"},
+      {:ranch, "~> 1.7.1"}
     ]
   end
 end
